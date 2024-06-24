@@ -145,17 +145,23 @@ st.write("Make-Kosten:")
 st.write(make_df)
 
 # Plotten der Daten
-fig, ax = plt.subplots(figsize=(10, 6))
-ax.plot(quantities, np.cumsum(make_costs_total[:len(quantities)]), label='Make', marker='o')
+st.header('Kostenvergleich')
+st.subheader('Gesamtkostenverlauf')
+
+quantities = np.arange(1, sum(batch_sizes) + 1)
+make_cumulative_costs = np.cumsum(make_costs_total)
+
+data = {
+    'Stückzahl': quantities,
+    'Make Gesamtkosten': make_cumulative_costs
+}
 
 for provider_idx, provider in enumerate(st.session_state.buy_providers):
-    ax.plot(quantities, np.cumsum(buy_costs_total_all_providers[provider_idx][:len(quantities)]), label=f'Buy - {provider["title"]}', marker='o')
+    buy_cumulative_costs = np.cumsum(buy_costs_total_all_providers[provider_idx])
+    data[f'Buy - {provider["title"]} Gesamtkosten'] = buy_cumulative_costs
 
-ax.set_xlabel('Stückzahl')
-ax.set_ylabel('Gesamtkosten')
-ax.set_title('Make-or-Buy Kostenvergleich')
-ax.legend()
+chart_data = pd.DataFrame(data)
 
-st.pyplot(fig)
+st.line_chart(chart_data.set_index('Stückzahl'))
 
 
