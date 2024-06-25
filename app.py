@@ -3,15 +3,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Title and description
 st.title('Make-or-Buy Decision Tool - Matthias Krüger')
-
-# Input for produced quantities and batch sizes
 st.header('Produced Quantities and Batch Sizes')
 num_batches = st.number_input('Number of Batches', min_value=1, value=1, step=1)
 batch_sizes = [st.number_input(f'Quantity for Batch {i+1}', min_value=1, value=100, step=1, key=f"batch_size_{i}") for i in range(num_batches)]
 
-# Input for Make costs
 st.header('Make Costs')
 if "make_costs" not in st.session_state:
     st.session_state.make_costs = []
@@ -19,7 +15,6 @@ if "make_costs" not in st.session_state:
 if st.button("Add Make Cost"):
     st.session_state.make_costs.append({"title": "", "type": "Fixed Costs", "value": 0.0, "batches": [], "start_batch": 1, "end_batch": 1})
 
-# Calculation of total costs for Make
 make_costs_total = np.zeros(len(batch_sizes), dtype=float)
 make_constant_costs = np.zeros(len(batch_sizes), dtype=float)
 
@@ -39,7 +34,7 @@ for idx, cost in enumerate(st.session_state.make_costs):
         cost["batches"] = selected_batches
         for batch in selected_batches:
             make_constant_costs[batch - 1] += cost_value
-    else:  # Unit Costs
+    else:
         cost["start_batch"] = cols[4].number_input(f'From Batch', min_value=1, max_value=num_batches, value=cost.get("start_batch", 1), step=1, key=f"make_start_batch_{idx}")
         cost["end_batch"] = cols[5].number_input(f'To Batch', min_value=1, max_value=num_batches, value=cost.get("end_batch", 1), step=1, key=f"make_end_batch_{idx}")
         for i in range(cost["start_batch"] - 1, cost["end_batch"]):
@@ -55,6 +50,8 @@ make_cumulative_pieces = 0
 cumulative_costs = [0]
 cumulative_pieces = [0]
 
+batch_ranges = [sum(batch_sizes[:i+1]) for i in range(len(batch_sizes))]
+
 for i, batch_size in enumerate(batch_sizes):
     make_variable_cost = make_costs_total[i]
     make_constant_cost = make_constant_costs[i]
@@ -65,20 +62,17 @@ for i, batch_size in enumerate(batch_sizes):
     row = {
         'Batch': i + 1,
         'Quantity': batch_size,
-        'Make Fixed Costs': make_constant_cost,  # Display correct fixed costs per batch
-        'Make Unit Costs': make_variable_cost,  # Unit costs per unit already multiplied with quantity
-        'Make Total': make_total_cost,  # Total costs per batch
+        'Make Fixed Costs': make_constant_cost,
+        'Make Unit Costs': make_variable_cost,
+        'Make Total': make_total_cost,
     }
 
     make_data.append(row)
-    
-    # Add cumulative costs and pieces to lists for plotting
     cumulative_pieces.append(cumulative_pieces[-1] + batch_size)
-    cumulative_costs.append(cumulative_costs[-1] + make_constant_cost + make_variable_cost)
+    cumulative_costs.append(cumulative_costs[-1] + make_variable_cost + make_constant_cost)
 
 make_df = pd.DataFrame(make_data)
 
-# Calculate totals
 make_totals = make_df[['Make Fixed Costs', 'Make Unit Costs', 'Make Total']].sum()
 make_totals_row = pd.DataFrame([{
     'Batch': 'Total',
@@ -92,7 +86,6 @@ make_df = pd.concat([make_df, make_totals_row], ignore_index=True)
 st.write("Make Costs:")
 st.write(make_df)
 
-# Input for Buy providers and costs
 st.header('Buy Providers and Costs')
 
 if "buy_providers" not in st.session_state:
@@ -104,7 +97,6 @@ if st.button("Add Buy Provider"):
 for provider_idx, provider in enumerate(st.session_state.buy_providers):
     provider["title"] = st.text_input(f'Title for Buy Provider {provider_idx + 1}', provider.get("title", ""), key=f"provider_title_{provider_idx}")
 
-    # Button to delete the provider
     if st.button(f"Delete Buy Provider {provider_idx + 1}"):
         del st.session_state.buy_providers[provider_idx]
         st.experimental_rerun()
@@ -130,7 +122,7 @@ for provider_idx, provider in enumerate(st.session_state.buy_providers):
             cost["batches"] = selected_batches
             for batch in selected_batches:
                 buy_costs_total[batch - 1] += cost_value
-        else:  # Unit Costs
+        else:
             cost["start_batch"] = cols[4].number_input(f'From Batch', min_value=1, max_value=num_batches, value=cost.get("start_batch", 1), step=1, key=f"buy_start_batch_{provider_idx}_{cost_idx}")
             cost["end_batch"] = cols[5].number_input(f'To Batch', min_value=1, max_value=num_batches, value=cost.get("end_batch", 1), step=1, key=f"buy_end_batch_{provider_idx}_{cost_idx}")
             for i in range(cost["start_batch"] - 1, cost["end_batch"]):
@@ -142,8 +134,8 @@ for provider_idx, provider in enumerate(st.session_state.buy_providers):
 
     buy_data = []
     buy_cumulative_cost = 0
-    buy_cumulative_pieces = [0]  # Initialize as list instead of int
-    buy_cumulative_costs = [0]  # Initialize as list instead of int
+    buy_cumulative_pieces = [0]
+    buy_cumulative_costs = [0]
 
     for i, batch_size in enumerate(batch_sizes):
         buy_variable_cost = buy_costs_total[i]
@@ -164,7 +156,6 @@ for provider_idx, provider in enumerate(st.session_state.buy_providers):
 
     buy_df = pd.DataFrame(buy_data)
 
-    # Calculate totals
     buy_totals = buy_df[['Buy Fixed Costs', 'Buy Unit Costs', 'Buy Total']].sum()
     buy_totals_row = pd.DataFrame([{
         'Batch': 'Total',
@@ -175,39 +166,29 @@ for provider_idx, provider in enumerate(st.session_state.buy_providers):
     }])
 
     buy_df = pd.concat([buy_df, buy_totals_row], ignore_index=True)
-    st.write(f"Buy Costs for Provider {provider['title']}:")
+    st.write(f"Buy Costs for Provider {provider_idx + 1}:")
     st.write(buy_df)
 
-# Plot
-fig, ax = plt.subplots()
+    plt.plot(buy_cumulative_pieces, buy_cumulative_costs, marker='o', linestyle='-', label=f'Buy Total Costs ({provider["title"]})')
 
-# Cumulative Make Costs
-ax.plot(cumulative_pieces, cumulative_costs, label='Make', marker='o')
+st.header('Cost Comparison Make vs. Buy')
 
-# Cumulative Buy Costs for each provider
-for provider_idx, provider in enumerate(st.session_state.buy_providers):
-    buy_cumulative_pieces = [0]
-    buy_cumulative_costs = [0]
+make_cumulative_costs_with_jumps = [0]
+cumulative_pieces_with_jumps = [0]
 
-    for i in range(len(batch_sizes)):
-        batch_size = batch_sizes[i]
-        batch_total_cost = sum(
-            float(cost["value"].replace(",", ".")) * batch_size if cost["type"] == 'Unit Costs' else float(cost["value"].replace(",", "."))
-            for cost in provider["costs"]
-            if cost["start_batch"] - 1 <= i < cost["end_batch"]
-        )
+make_cumulative_cost = 0
+for i, batch_size in enumerate(batch_sizes):
+    make_cumulative_cost += make_constant_costs[i] 
+    cumulative_pieces_with_jumps.append(sum(batch_sizes[:i]))
+    make_cumulative_costs_with_jumps.append(make_cumulative_cost)
+    
+    make_cumulative_cost += make_costs_total[i] 
+    cumulative_pieces_with_jumps.append(sum(batch_sizes[:i+1]))
+    make_cumulative_costs_with_jumps.append(make_cumulative_cost)
 
-        buy_cumulative_pieces.append(buy_cumulative_pieces[-1] + batch_size)
-        buy_cumulative_costs.append(buy_cumulative_costs[-1] + batch_total_cost)
-
-    ax.plot(buy_cumulative_pieces, buy_cumulative_costs, label=provider["title"], marker='o')
-
-ax.set_xlabel('Quantity')
-ax.set_ylabel('Total Costs (€)')
-ax.set_title('Cost Comparison Make vs. Buy')
-ax.legend()
-ax.set_xlim(left=0)
-ax.set_ylim(bottom=0)
-
-st.pyplot(fig)
-
+plt.plot(cumulative_pieces_with_jumps, make_cumulative_costs_with_jumps, marker='o', linestyle='-', label='Make Total Costs')
+plt.xlabel('Quantity')
+plt.ylabel('Total Costs (€)')
+plt.legend()
+plt.title('Cost Comparison Make vs. Buy')
+st.pyplot(plt)
