@@ -104,6 +104,11 @@ if st.button("Add Buy Provider"):
 for provider_idx, provider in enumerate(st.session_state.buy_providers):
     provider["title"] = st.text_input(f'Title for Buy Provider {provider_idx + 1}', provider.get("title", ""), key=f"provider_title_{provider_idx}")
 
+    # Button to delete the provider
+    if st.button(f"Delete Buy Provider {provider_idx + 1}"):
+        del st.session_state.buy_providers[provider_idx]
+        st.experimental_rerun()
+
     if st.button(f"Add Cost for Provider {provider_idx + 1}"):
         provider["costs"].append({"title": "", "type": "Fixed Costs", "value": 0.0, "batches": [], "start_batch": 1, "end_batch": 1})
 
@@ -144,15 +149,15 @@ for provider_idx, provider in enumerate(st.session_state.buy_providers):
         buy_variable_cost = buy_costs_total[i]
         buy_total_cost = buy_variable_cost
         buy_cumulative_cost += buy_total_cost
-        buy_cumulative_pieces.append(buy_cumulative_pieces[-1] + batch_size)  # Append to list instead of using +=
-        buy_cumulative_costs.append(buy_cumulative_costs[-1] + buy_variable_cost)  # Append to list instead of using +=
+        buy_cumulative_pieces.append(buy_cumulative_pieces[-1] + batch_size)
+        buy_cumulative_costs.append(buy_cumulative_costs[-1] + buy_variable_cost)
 
         row = {
             'Batch': i + 1,
             'Quantity': batch_size,
             'Buy Fixed Costs': 0.0,
-            'Buy Unit Costs': buy_variable_cost,  # Unit costs per unit already multiplied with quantity
-            'Buy Total': buy_total_cost,  # Total costs per batch
+            'Buy Unit Costs': buy_variable_cost,
+            'Buy Total': buy_total_cost,
         }
 
         buy_data.append(row)
@@ -205,3 +210,4 @@ ax.set_xlim(left=0)
 ax.set_ylim(bottom=0)
 
 st.pyplot(fig)
+
